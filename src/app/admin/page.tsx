@@ -384,7 +384,13 @@ export default function StoreManagementDashboard() {
     };
     window.addEventListener('foodflow_new_order', handleNewOrder);
 
+    // Auto-poll every 5 seconds for rock-solid live sync (even if WebSockets are blocked)
+    const pollInterval = setInterval(() => {
+      fetchLiveOrders();
+    }, 5000);
+
     return () => {
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
       window.removeEventListener('foodflow_new_order', handleNewOrder);
     };
@@ -399,7 +405,9 @@ export default function StoreManagementDashboard() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('foodflow_mgmt_orders', JSON.stringify(orders));
+      if (orders.length > 0) {
+        localStorage.setItem('foodflow_mgmt_orders', JSON.stringify(orders));
+      }
     } catch (e) {}
   }, [orders]);
 
@@ -476,9 +484,11 @@ export default function StoreManagementDashboard() {
   const filteredOrders = useMemo(() => {
     return orders.filter(o => {
       const matchStatus = orderStatusFilter === 'all' || o.status === orderStatusFilter;
-      const matchSearch = o.order_number.toLowerCase().includes(orderSearch.toLowerCase()) ||
-                          o.customer_name.toLowerCase().includes(orderSearch.toLowerCase()) ||
-                          o.customer_phone.includes(orderSearch);
+      const num = (o.order_number || '').toLowerCase();
+      const name = (o.customer_name || '').toLowerCase();
+      const phone = (o.customer_phone || '').toLowerCase();
+      const search = (orderSearch || '').toLowerCase().trim();
+      const matchSearch = !search || num.includes(search) || name.includes(search) || phone.includes(search);
       return matchStatus && matchSearch;
     });
   }, [orders, orderStatusFilter, orderSearch]);
