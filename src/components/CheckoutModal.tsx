@@ -76,6 +76,20 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       status: 'pending'
     };
 
+    // Save to LocalStorage for instant local dashboard sync
+    try {
+      const existing = JSON.parse(localStorage.getItem('foodflow_local_orders') || '[]');
+      const newLocalOrder = {
+        ...orderPayload,
+        id: 'ord-' + Date.now(),
+        created_at: new Date().toISOString()
+      };
+      localStorage.setItem('foodflow_local_orders', JSON.stringify([newLocalOrder, ...existing]));
+      window.dispatchEvent(new CustomEvent('foodflow_new_order', { detail: newLocalOrder }));
+    } catch (e) {
+      console.warn('Local order storage note:', e);
+    }
+
     // Save to Supabase (async)
     supabase.from('orders').insert([orderPayload]).then(({ error }) => {
       if (error) {
