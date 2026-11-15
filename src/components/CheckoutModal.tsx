@@ -33,8 +33,24 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Dynamically load delivery fees and thresholds from Admin Settings if available
+  let insideDhakaFee = 70;
+  let outsideDhakaFee = 130;
+  let freeDeliveryThreshold = 2000;
+  try {
+    if (typeof window !== 'undefined') {
+      const savedSettings = localStorage.getItem('foodflow_mgmt_settings');
+      if (savedSettings) {
+        const s = JSON.parse(savedSettings);
+        if (s.deliveryInsideDhaka !== undefined) insideDhakaFee = Number(s.deliveryInsideDhaka);
+        if (s.deliveryOutsideDhaka !== undefined) outsideDhakaFee = Number(s.deliveryOutsideDhaka);
+        if (s.freeDeliveryThreshold !== undefined) freeDeliveryThreshold = Number(s.freeDeliveryThreshold);
+      }
+    }
+  } catch (e) {}
+
   const subtotal = items.reduce((sum, item) => sum + item.selectedVariant.price * item.quantity, 0);
-  const deliveryFee = subtotal >= 1500 ? 0 : (selectedCity === 'Inside Dhaka' ? 60 : 120);
+  const deliveryFee = subtotal >= freeDeliveryThreshold ? 0 : (selectedCity === 'Inside Dhaka' ? insideDhakaFee : outsideDhakaFee);
   const grandTotal = Math.max(0, subtotal - discount + deliveryFee);
 
   const handleSubmit = (e: React.FormEvent) => {

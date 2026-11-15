@@ -40,7 +40,8 @@ import {
   Building,
   Mail,
   MapPin,
-  Tag
+  Tag,
+  Download
 } from 'lucide-react';
 
 // ==========================================
@@ -574,6 +575,39 @@ export default function StoreManagementDashboard() {
       setSelectedOrder(prev => prev ? { ...prev, status: newStatus } : null);
     }
     showToast(`Order status set to ${newStatus.toUpperCase()}`);
+  };
+
+  // Export Orders to CSV
+  const exportOrdersToCSV = () => {
+    if (filteredOrders.length === 0) {
+      alert('No orders to export!');
+      return;
+    }
+    const headers = ['Order Number', 'Date', 'Customer Name', 'Phone', 'Address', 'Delivery Area', 'Items', 'Subtotal', 'Delivery Fee', 'Discount', 'Total Amount', 'Payment Method', 'Status'];
+    const rows = filteredOrders.map(o => [
+      `"${o.order_number}"`,
+      `"${new Date(o.created_at).toLocaleString()}"`,
+      `"${(o.customer_name || '').replace(/"/g, '""')}"`,
+      `"${o.customer_phone || ''}"`,
+      `"${(o.customer_address || '').replace(/"/g, '""')}"`,
+      `"${o.delivery_area || ''}"`,
+      `"${o.items.map(i => `${i.name} (x${i.quantity})`).join('; ').replace(/"/g, '""')}"`,
+      o.subtotal,
+      o.delivery_fee,
+      o.discount,
+      o.total_amount,
+      `"${o.payment_method}"`,
+      `"${o.status}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `foodflow_orders_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Orders exported to CSV file successfully!');
   };
 
   // Category Add
@@ -1218,16 +1252,27 @@ export default function StoreManagementDashboard() {
                   ))}
                 </div>
 
-                {/* Search */}
-                <div className="relative w-full md:w-64">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={orderSearch}
-                    onChange={(e) => setOrderSearch(e.target.value)}
-                    placeholder="Search by order #, phone..."
-                    className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600"
-                  />
+                {/* Search & Export */}
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                  <div className="relative flex-1 md:w-64">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={orderSearch}
+                      onChange={(e) => setOrderSearch(e.target.value)}
+                      placeholder="Search by order #, phone..."
+                      className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600"
+                    />
+                  </div>
+
+                  <button
+                    onClick={exportOrdersToCSV}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold whitespace-nowrap transition"
+                    title="Export filtered orders to Excel/CSV"
+                  >
+                    <Download className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Export CSV</span>
+                  </button>
                 </div>
               </div>
 
@@ -1973,7 +2018,7 @@ export default function StoreManagementDashboard() {
       {/* ========================================================= */}
       {selectedOrder && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex justify-end">
-          <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+          <div id="printable-invoice" className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
             <div className="p-5 border-b border-slate-200 flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-slate-900 text-base">Order #{selectedOrder.order_number}</h3>
