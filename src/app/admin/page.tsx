@@ -124,7 +124,7 @@ const DEFAULT_PRODUCTS: Product[] = [
     name: 'Dhakai Pure Milk Butter (খাটি দুধের মাখন)',
     category: 'Dairy',
     price: 850,
-    stock: 24,
+    stock: 50,
     sku: 'DF-BUTTER-500',
     image: 'https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&w=400&q=80',
     description: '100% grass-fed farm churned pure butter from Sirajganj milk sheds.'
@@ -134,7 +134,7 @@ const DEFAULT_PRODUCTS: Product[] = [
     name: 'Premium Danadar Ghee (দানাদার গাওয়া ঘি)',
     category: 'Dairy',
     price: 1350,
-    stock: 8, // Low stock for inventory demo
+    stock: 50,
     sku: 'DF-GHEE-900',
     image: 'https://images.unsplash.com/photo-1631451095765-2c91616fc9e6?auto=format&fit=crop&w=400&q=80',
     description: 'Traditional bilona churned golden ghee with authentic aroma.'
@@ -144,7 +144,7 @@ const DEFAULT_PRODUCTS: Product[] = [
     name: 'Single-Origin Arabica Roast Coffee',
     category: 'Coffee',
     price: 920,
-    stock: 0, // Out of stock for inventory demo
+    stock: 35,
     sku: 'DF-COFFEE-250',
     image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?auto=format&fit=crop&w=400&q=80',
     description: 'Hand-picked Bandarban highland Arabica beans medium-dark roasted.'
@@ -154,7 +154,7 @@ const DEFAULT_PRODUCTS: Product[] = [
     name: 'Pure Sundarban Wild Honey (সুন্দরবনের মধু)',
     category: 'Honey',
     price: 1100,
-    stock: 19,
+    stock: 40,
     sku: 'DF-HONEY-500',
     image: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&w=400&q=80',
     description: 'Raw unfiltered honey sourced directly from natural hives in the Sundarbans.'
@@ -164,93 +164,15 @@ const DEFAULT_PRODUCTS: Product[] = [
     name: 'Organic Mustard Oil (ঘানি ভাঙা সরিষার তেল)',
     category: 'Oils',
     price: 360,
-    stock: 4, // Low stock
+    stock: 60,
     sku: 'DF-OIL-1000',
     image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=400&q=80',
     description: 'Cold-pressed wooden expeller mustard seed oil with intense pungency.'
   }
 ];
 
-const DEFAULT_ORDERS: Order[] = [
-  {
-    id: 'ord-1001',
-    order_number: 'FF-1001',
-    customer_name: 'Tanvir Hossain',
-    customer_phone: '01711223344',
-    customer_email: 'tanvir.h@gmail.com',
-    customer_address: 'House 14, Road 7, Sector 3, Uttara, Dhaka',
-    delivery_area: 'inside',
-    items: [
-      { name: 'Dhakai Pure Milk Butter', variant: '500g', price: 850, quantity: 2 },
-      { name: 'Premium Danadar Ghee', variant: '900g', price: 1350, quantity: 1 }
-    ],
-    subtotal: 3050,
-    delivery_fee: 70,
-    discount: 0,
-    total_amount: 3120,
-    payment_method: 'Cash on Delivery',
-    status: 'pending',
-    created_at: new Date(Date.now() - 3600000 * 2).toISOString()
-  },
-  {
-    id: 'ord-1002',
-    order_number: 'FF-1002',
-    customer_name: 'Nusrat Jahan',
-    customer_phone: '01822334455',
-    customer_email: 'nusrat.j@yahoo.com',
-    customer_address: 'Flat 4B, Shaptak Square, Dhanmondi 27, Dhaka',
-    delivery_area: 'inside',
-    items: [
-      { name: 'Single-Origin Arabica Roast Coffee', variant: '250g', price: 920, quantity: 1 }
-    ],
-    subtotal: 920,
-    delivery_fee: 70,
-    discount: 50,
-    total_amount: 940,
-    payment_method: 'bKash Online',
-    status: 'processing',
-    created_at: new Date(Date.now() - 3600000 * 6).toISOString()
-  },
-  {
-    id: 'ord-1003',
-    order_number: 'FF-1003',
-    customer_name: 'Kazi Farhan',
-    customer_phone: '01933445566',
-    customer_email: 'farhan.kazi@outlook.com',
-    customer_address: 'Holding 89, GEC Circle, Nasirabad, Chattogram',
-    delivery_area: 'outside',
-    items: [
-      { name: 'Premium Danadar Ghee', variant: '900g', price: 1350, quantity: 2 },
-      { name: 'Pure Sundarban Wild Honey', variant: '500g', price: 1100, quantity: 1 }
-    ],
-    subtotal: 3800,
-    delivery_fee: 130,
-    discount: 100,
-    total_amount: 3830,
-    payment_method: 'Cash on Delivery',
-    status: 'completed',
-    created_at: new Date(Date.now() - 3600000 * 24).toISOString()
-  },
-  {
-    id: 'ord-1004',
-    order_number: 'FF-1004',
-    customer_name: 'Sabrina Islam',
-    customer_phone: '01644556677',
-    customer_email: 'sabrina.is@gmail.com',
-    customer_address: 'House 5, Road 2, Block D, Mirpur 12, Dhaka',
-    delivery_area: 'inside',
-    items: [
-      { name: 'Organic Mustard Oil', variant: '1L', price: 360, quantity: 2 }
-    ],
-    subtotal: 720,
-    delivery_fee: 70,
-    discount: 0,
-    total_amount: 790,
-    payment_method: 'Cash on Delivery',
-    status: 'cancelled',
-    created_at: new Date(Date.now() - 3600000 * 48).toISOString()
-  }
-];
+// Clean Production State: No mock/demo orders
+const DEFAULT_ORDERS: Order[] = [];
 
 const DEFAULT_SETTINGS: StoreSettings = {
   storeName: 'FoodFlow (ফুডফ্লো)',
@@ -326,17 +248,19 @@ export default function StoreManagementDashboard() {
       const savedProds = localStorage.getItem('foodflow_mgmt_products');
       if (savedProds) setProducts(JSON.parse(savedProds));
 
-      const savedOrders = localStorage.getItem('foodflow_mgmt_orders');
-      if (savedOrders) {
-        setOrders(JSON.parse(savedOrders));
+      // Check if demo is reset or read saved orders
+      const isDemoReset = localStorage.getItem('foodflow_demo_reset_v2');
+      if (isDemoReset) {
+        setOrders([]);
       } else {
-        // also check storefront orders
-        const storefrontOrders = localStorage.getItem('foodflow_orders');
-        if (storefrontOrders) {
-          const parsed = JSON.parse(storefrontOrders);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setOrders([...parsed, ...DEFAULT_ORDERS]);
-          }
+        const savedOrders = localStorage.getItem('foodflow_mgmt_orders');
+        if (savedOrders) {
+          const parsed = JSON.parse(savedOrders);
+          // filter out any old demo orders FF-1001..FF-1004
+          const realOrders = parsed.filter((o: any) => !['ord-1001', 'ord-1002', 'ord-1003', 'ord-1004'].includes(o.id));
+          setOrders(realOrders);
+        } else {
+          setOrders([]);
         }
       }
 
@@ -608,6 +532,18 @@ export default function StoreManagementDashboard() {
     link.click();
     document.body.removeChild(link);
     showToast('Orders exported to CSV file successfully!');
+  };
+
+  // Reset Demo Data
+  const handleResetDemoData = () => {
+    if (confirm('Are you sure you want to clear all mock/demo orders and test customer records? Real products and settings will be preserved.')) {
+      setOrders([]);
+      localStorage.removeItem('foodflow_mgmt_orders');
+      localStorage.removeItem('foodflow_orders');
+      localStorage.removeItem('foodflow_local_orders');
+      localStorage.setItem('foodflow_demo_reset_v2', 'true');
+      showToast('All demo orders cleared! Dashboard is now 100% clean for real business.');
+    }
   };
 
   // Category Add
@@ -982,30 +918,29 @@ export default function StoreManagementDashboard() {
                 {/* Visual SVG Bar Chart */}
                 <div className="pt-4">
                   <div className="grid grid-cols-7 gap-2 sm:gap-4 items-end h-44 border-b border-slate-200 pb-2">
-                    {[
-                      { day: 'Mon', val: 1850, h: '35%' },
-                      { day: 'Tue', val: 2400, h: '48%' },
-                      { day: 'Wed', val: 1200, h: '25%' },
-                      { day: 'Thu', val: 3900, h: '78%' },
-                      { day: 'Fri', val: 4200, h: '85%' },
-                      { day: 'Sat', val: 5100, h: '98%' },
-                      { day: 'Sun (Today)', val: totalRevenue > 6000 ? 5600 : 3120, h: '65%' },
-                    ].map((item, idx) => (
-                      <div key={idx} className="flex flex-col items-center gap-2 group">
-                        <span className="text-[10px] font-semibold text-slate-500 opacity-0 group-hover:opacity-100 transition">
-                          ৳{item.val}
-                        </span>
-                        <div className="w-full bg-slate-100 rounded-t-lg flex items-end h-32 overflow-hidden">
-                          <div 
-                            style={{ height: item.h }} 
-                            className="w-full bg-indigo-600 rounded-t-lg group-hover:bg-indigo-500 transition-all duration-300"
-                          />
+                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => {
+                      const dayVal = orders
+                        .filter(o => new Date(o.created_at).getDay() === (idx + 1) % 7)
+                        .reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
+                      const maxVal = Math.max(1000, ...orders.map(o => Number(o.total_amount) || 0));
+                      const heightPercent = dayVal > 0 ? Math.min(100, Math.round((dayVal / maxVal) * 90) + 10) : 4;
+                      return (
+                        <div key={idx} className="flex flex-col items-center gap-2 group">
+                          <span className="text-[10px] font-semibold text-slate-500 opacity-0 group-hover:opacity-100 transition">
+                            ৳{dayVal}
+                          </span>
+                          <div className="w-full bg-slate-100 rounded-t-lg flex items-end h-32 overflow-hidden">
+                            <div 
+                              style={{ height: `${heightPercent}%` }} 
+                              className={`w-full rounded-t-lg transition-all duration-300 ${dayVal > 0 ? 'bg-indigo-600 group-hover:bg-indigo-500' : 'bg-slate-200'}`}
+                            />
+                          </div>
+                          <span className="text-[11px] font-medium text-slate-500 truncate w-full text-center">
+                            {day}
+                          </span>
                         </div>
-                        <span className="text-[11px] font-medium text-slate-500 truncate w-full text-center">
-                          {item.day}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -1038,7 +973,16 @@ export default function StoreManagementDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {recentOrders.map(order => (
+                      {recentOrders.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-12 text-center text-slate-400">
+                            <ShoppingBag className="w-7 h-7 mx-auto text-slate-300 mb-2" />
+                            <p className="font-semibold text-slate-700 text-xs">No customer orders yet</p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">Orders placed by customers on your live store will appear here immediately.</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        recentOrders.map(order => (
                         <tr key={order.id} className="hover:bg-slate-50/50 transition">
                           <td className="py-3 px-4 font-bold text-slate-900">
                             #{order.order_number}
@@ -1065,7 +1009,7 @@ export default function StoreManagementDashboard() {
                             </button>
                           </td>
                         </tr>
-                      ))}
+                      )))}
                     </tbody>
                   </table>
                 </div>
@@ -1814,6 +1758,27 @@ export default function StoreManagementDashboard() {
                       />
                     )}
                   </div>
+                </div>
+              </div>
+
+              {/* Reset Demo Data Card */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                  <RefreshCw className="w-5 h-5 text-rose-600" />
+                  <h2 className="text-sm font-bold text-slate-900">Reset Demo Data & Start Fresh</h2>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Clear all historical mock/demo orders and test customer records to begin with a clean ৳0 revenue baseline for real business. Product inventory and store settings will remain intact.
+                </p>
+                <div>
+                  <button
+                    type="button"
+                    onClick={handleResetDemoData}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold text-xs transition"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Clear Demo Orders (Reset to ৳0)
+                  </button>
                 </div>
               </div>
 
