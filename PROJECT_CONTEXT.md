@@ -12,7 +12,7 @@
 ## 🏗️ Standard Production Stack (The "RiesenCode" Stack)
 Whenever building web applications for Emtiaz, always follow this proven production stack:
 1. **Frontend:** Next.js (App Router), Tailwind CSS, Lucide Icons
-2. **Version Control & Repository:** GitHub (`https://github.com/Emtiazjahan/<repo-name>`)
+2. **Version Control & Repository:** GitHub (https://github.com/Emtiazjahan/foodflow-)
 3. **Database / Backend:** Supabase (PostgreSQL for orders, leads, customer authentication)
 4. **Cloud Hosting & Deployment:** Vercel (connected directly to GitHub repository for automated continuous deployment)
 

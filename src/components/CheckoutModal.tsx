@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { X, CheckCircle2, Phone, MapPin, Truck, ShieldCheck, Download } from 'lucide-react';
 import { CartItem, OrderConfirmation } from '../types';
+import { supabase } from '../lib/supabase';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -51,8 +52,40 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
 
     setIsSubmitting(true);
+    const orderNum = `FF-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const orderPayload = {
+      order_number: orderNum,
+      customer_name: customerName.trim(),
+      customer_phone: customerPhone.trim(),
+      customer_address: deliveryAddress.trim(),
+      delivery_area: selectedCity,
+      items: items.map((i) => ({
+        id: i.product.id,
+        name: i.product.name,
+        variant: i.selectedVariant.name,
+        price: i.selectedVariant.price,
+        quantity: i.quantity,
+        image: i.product.image,
+      })),
+      subtotal,
+      delivery_fee: deliveryFee,
+      discount,
+      total_amount: grandTotal,
+      payment_method: paymentMethod === 'cod' ? 'Cash on Delivery' : 'bKash',
+      status: 'pending'
+    };
+
+    // Save to Supabase (async)
+    supabase.from('orders').insert([orderPayload]).then(({ error }) => {
+      if (error) {
+        console.warn('Supabase order insert note:', error.message);
+      }
+    }).catch((err) => {
+      console.warn('Supabase network error:', err);
+    });
+
     setTimeout(() => {
-      const orderNum = `FF-${Math.floor(100000 + Math.random() * 900000)}`;
       const order: OrderConfirmation = {
         orderNumber: orderNum,
         customerName: customerName.trim(),
@@ -81,7 +114,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       setConfirmedOrder(order);
       onOrderSuccess(order);
       setIsSubmitting(false);
-    }, 800);
+    }, 600);
   };
 
   return (
