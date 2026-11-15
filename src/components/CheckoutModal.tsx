@@ -107,13 +107,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
 
     // Save to Supabase (async)
-    supabase.from('orders').insert([orderPayload]).then(({ error }) => {
-      if (error) {
-        console.warn('Supabase order insert note:', error.message);
+    (async () => {
+      try {
+        const { error } = await supabase.from('orders').insert([orderPayload]);
+        if (error) {
+          console.warn('Supabase order insert note:', error.message);
+        }
+      } catch (err) {
+        console.warn('Supabase network error:', err);
       }
-    }).catch((err) => {
-      console.warn('Supabase network error:', err);
-    });
+    })();
 
     setTimeout(() => {
       const order: OrderConfirmation = {
