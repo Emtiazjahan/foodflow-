@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { supabase, FoodFlowOrder } from '../../lib/supabase';
 import {
   LayoutDashboard,
   Package,
@@ -236,33 +237,99 @@ export default function StoreManagementDashboard() {
   // Settings Temp Form
   const [settingsForm, setSettingsForm] = useState<StoreSettings>(DEFAULT_SETTINGS);
 
+  // Syncing & Realtime state
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+
   // Toast Helper
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // ── Load from LocalStorage on mount ──
+  // ── Live Supabase Order Sync ──
+  const fetchLiveOrders = async () => {
+    setIsSyncing(true);
+    try {
+      // 1. Fetch from Supabase cloud database
+      const { data: dbOrders, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('Supabase fetch note:', error.message);
+      }
+
+      // 2. Fetch local storage orders
+      let localOrders: any[] = [];
+      try {
+        const l1 = JSON.parse(localStorage.getItem('foodflow_local_orders') || '[]');
+        const l2 = JSON.parse(localStorage.getItem('foodflow_mgmt_orders') || '[]');
+        localOrders = [...l1, ...l2];
+      } catch (e) {}
+
+      // Clean any accidental legacy reset lock
+      localStorage.removeItem('foodflow_demo_reset_v2');
+
+      // 3. Combine & deduplicate orders
+      const combined = [...(dbOrders || []), ...localOrders];
+      const seen = new Set<string>();
+      const uniqueOrders: Order[] = [];
+
+      for (const ord of combined) {
+        const key = ord.order_number || ord.id;
+        if (!key || seen.has(key)) continue;
+        // Skip mock/demo orders
+        if (['ord-1001', 'ord-1002', 'ord-1003', 'ord-1004', 'FF-1001', 'FF-1002', 'FF-1003', 'FF-1004'].includes(key)) continue;
+        seen.add(key);
+
+        // Map status
+        let normalizedStatus: OrderStatus = 'pending';
+        if (ord.status === 'confirmed' || ord.status === 'processing' || ord.status === 'shipped') {
+          normalizedStatus = 'processing';
+        } else if (ord.status === 'delivered' || ord.status === 'completed') {
+          normalizedStatus = 'completed';
+        } else if (ord.status === 'cancelled') {
+          normalizedStatus = 'cancelled';
+        }
+
+        uniqueOrders.push({
+          id: ord.id ? String(ord.id) : `ord-${ord.order_number}`,
+          order_number: ord.order_number || 'FF-000000',
+          customer_name: ord.customer_name || 'Customer',
+          customer_phone: ord.customer_phone || 'N/A',
+          customer_email: ord.customer_email || '',
+          customer_address: ord.customer_address || 'Dhaka, Bangladesh',
+          delivery_area: ord.delivery_area || 'inside',
+          items: Array.isArray(ord.items) ? ord.items : [],
+          subtotal: Number(ord.subtotal) || 0,
+          delivery_fee: Number(ord.delivery_fee) || 0,
+          discount: Number(ord.discount) || 0,
+          total_amount: Number(ord.total_amount) || 0,
+          payment_method: ord.payment_method || 'Cash on Delivery',
+          status: normalizedStatus,
+          created_at: ord.created_at || new Date().toISOString()
+        });
+      }
+
+      setOrders(uniqueOrders);
+      setLastSyncedAt(new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      try {
+        localStorage.setItem('foodflow_mgmt_orders', JSON.stringify(uniqueOrders));
+      } catch (e) {}
+    } catch (err) {
+      console.error('Error fetching live orders:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // ── Load from LocalStorage & Supabase on mount ──
   useEffect(() => {
     try {
       const savedProds = localStorage.getItem('foodflow_mgmt_products');
       if (savedProds) setProducts(JSON.parse(savedProds));
-
-      // Check if demo is reset or read saved orders
-      const isDemoReset = localStorage.getItem('foodflow_demo_reset_v2');
-      if (isDemoReset) {
-        setOrders([]);
-      } else {
-        const savedOrders = localStorage.getItem('foodflow_mgmt_orders');
-        if (savedOrders) {
-          const parsed = JSON.parse(savedOrders);
-          // filter out any old demo orders FF-1001..FF-1004
-          const realOrders = parsed.filter((o: any) => !['ord-1001', 'ord-1002', 'ord-1003', 'ord-1004'].includes(o.id));
-          setOrders(realOrders);
-        } else {
-          setOrders([]);
-        }
-      }
 
       const savedSettings = localStorage.getItem('foodflow_mgmt_settings');
       if (savedSettings) {
@@ -273,9 +340,54 @@ export default function StoreManagementDashboard() {
 
       const savedCats = localStorage.getItem('foodflow_mgmt_categories');
       if (savedCats) setCategories(JSON.parse(savedCats));
+
+      // Quick-load cached orders before Supabase returns
+      const savedOrders = localStorage.getItem('foodflow_mgmt_orders') || localStorage.getItem('foodflow_local_orders');
+      if (savedOrders) {
+        const parsed = JSON.parse(savedOrders);
+        const realOrders = parsed.filter((o: any) => !['ord-1001', 'ord-1002', 'ord-1003', 'ord-1004', 'FF-1001', 'FF-1002', 'FF-1003', 'FF-1004'].includes(o.id || o.order_number));
+        setOrders(realOrders);
+      }
     } catch (e) {
       console.error('LocalStorage load error', e);
     }
+
+    // Live sync from Supabase
+    fetchLiveOrders();
+
+    // Subscribe to Supabase Realtime channel
+    const channel = supabase
+      .channel('admin_realtime_orders')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        (payload) => {
+          fetchLiveOrders();
+          if (payload.eventType === 'INSERT') {
+            const newOrd = payload.new as any;
+            showToast(`🔔 নতুন অর্ডার এসেছে: ${newOrd?.order_number || 'নতুন অর্ডার'} (${newOrd?.customer_name || ''})`);
+          }
+        }
+      )
+      .subscribe();
+
+    // Listen for local tab events
+    const handleNewOrder = (event: any) => {
+      const newOrderData = event.detail;
+      if (newOrderData) {
+        setOrders(prev => {
+          if (prev.some(o => o.order_number === newOrderData.order_number)) return prev;
+          return [newOrderData, ...prev];
+        });
+        showToast(`🎉 New order received from ${newOrderData.customer_name}!`);
+      }
+    };
+    window.addEventListener('foodflow_new_order', handleNewOrder);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener('foodflow_new_order', handleNewOrder);
+    };
   }, []);
 
   // ── Save to LocalStorage ──
@@ -302,19 +414,6 @@ export default function StoreManagementDashboard() {
       localStorage.setItem('foodflow_mgmt_categories', JSON.stringify(categories));
     } catch (e) {}
   }, [categories]);
-
-  // ── Listen for live new storefront orders ──
-  useEffect(() => {
-    const handleNewOrder = (event: any) => {
-      const newOrderData = event.detail;
-      if (newOrderData) {
-        setOrders(prev => [newOrderData, ...prev]);
-        showToast(`🎉 New order received from ${newOrderData.customer_name}!`);
-      }
-    };
-    window.addEventListener('foodflow_new_order', handleNewOrder);
-    return () => window.removeEventListener('foodflow_new_order', handleNewOrder);
-  }, []);
 
   // ==========================================
   // COMPUTED STATS & LISTS
@@ -493,12 +592,22 @@ export default function StoreManagementDashboard() {
   };
 
   // Update Order Status
-  const handleUpdateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-    if (selectedOrder && selectedOrder.id === orderId) {
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
+    const targetOrder = orders.find(o => o.id === orderId || o.order_number === orderId);
+    setOrders(prev => prev.map(o => (o.id === orderId || o.order_number === orderId) ? { ...o, status: newStatus } : o));
+    if (selectedOrder && (selectedOrder.id === orderId || selectedOrder.order_number === orderId)) {
       setSelectedOrder(prev => prev ? { ...prev, status: newStatus } : null);
     }
     showToast(`Order status set to ${newStatus.toUpperCase()}`);
+
+    // Update in Supabase
+    if (targetOrder?.order_number) {
+      try {
+        await supabase.from('orders').update({ status: newStatus }).eq('order_number', targetOrder.order_number);
+      } catch (e) {
+        console.warn('Supabase status update error:', e);
+      }
+    }
   };
 
   // Export Orders to CSV
@@ -515,7 +624,7 @@ export default function StoreManagementDashboard() {
       `"${o.customer_phone || ''}"`,
       `"${(o.customer_address || '').replace(/"/g, '""')}"`,
       `"${o.delivery_area || ''}"`,
-      `"${o.items.map(i => `${i.name} (x${i.quantity})`).join('; ').replace(/"/g, '""')}"`,
+      `"${(Array.isArray(o.items) ? o.items : []).map(i => `${i?.name || 'Item'} (x${i?.quantity || 1})`).join('; ').replace(/"/g, '""')}"`,
       o.subtotal,
       o.delivery_fee,
       o.discount,
@@ -541,7 +650,7 @@ export default function StoreManagementDashboard() {
       localStorage.removeItem('foodflow_mgmt_orders');
       localStorage.removeItem('foodflow_orders');
       localStorage.removeItem('foodflow_local_orders');
-      localStorage.setItem('foodflow_demo_reset_v2', 'true');
+      localStorage.removeItem('foodflow_demo_reset_v2');
       showToast('All demo orders cleared! Dashboard is now 100% clean for real business.');
     }
   };
@@ -817,6 +926,16 @@ export default function StoreManagementDashboard() {
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={fetchLiveOrders}
+              disabled={isSyncing}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs transition disabled:opacity-60 cursor-pointer"
+              title="Sync live orders with Supabase cloud"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-indigo-600 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">{isSyncing ? 'Syncing...' : lastSyncedAt ? `Synced ${lastSyncedAt}` : 'Sync Cloud'}</span>
+            </button>
+
             <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               Live Store Ready
@@ -992,7 +1111,7 @@ export default function StoreManagementDashboard() {
                             <span className="text-[11px] text-slate-400">{order.customer_phone}</span>
                           </td>
                           <td className="py-3 px-4 text-slate-600">
-                            {order.items.map(it => `${it.name} (${it.quantity}x)`).join(', ')}
+                            {(Array.isArray(order.items) ? order.items : []).map(it => `${it?.name || 'Item'} (${it?.quantity || 1}x)`).join(', ')}
                           </td>
                           <td className="py-3 px-4 font-bold text-slate-900">
                             ৳{order.total_amount.toLocaleString()}
@@ -1210,6 +1329,16 @@ export default function StoreManagementDashboard() {
                   </div>
 
                   <button
+                    onClick={fetchLiveOrders}
+                    disabled={isSyncing}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold whitespace-nowrap transition disabled:opacity-60 cursor-pointer"
+                    title="Refresh orders from Supabase cloud database"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 text-indigo-600 ${isSyncing ? 'animate-spin' : ''}`} />
+                    <span>{isSyncing ? 'Syncing...' : 'Sync Orders'}</span>
+                  </button>
+
+                  <button
                     onClick={exportOrdersToCSV}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold whitespace-nowrap transition"
                     title="Export filtered orders to Excel/CSV"
@@ -1256,7 +1385,7 @@ export default function StoreManagementDashboard() {
                               <span className="text-[11px] text-slate-400">{order.customer_phone}</span>
                             </td>
                             <td className="py-3.5 px-4 text-slate-600 max-w-xs truncate">
-                              {order.items.map(i => `${i.name} (x${i.quantity})`).join(', ')}
+                              {(Array.isArray(order.items) ? order.items : []).map(i => `${i?.name || 'Item'} (x${i?.quantity || 1})`).join(', ')}
                             </td>
                             <td className="py-3.5 px-4 font-bold text-slate-900">
                               ৳{order.total_amount.toLocaleString()}
@@ -2041,7 +2170,7 @@ export default function StoreManagementDashboard() {
               <div className="space-y-2">
                 <span className="font-bold text-slate-900 text-xs block">Items Ordered</span>
                 <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden">
-                  {selectedOrder.items.map((it, idx) => (
+                  {(Array.isArray(selectedOrder.items) ? selectedOrder.items : []).map((it, idx) => (
                     <div key={idx} className="p-3 flex items-center justify-between">
                       <div>
                         <span className="font-semibold text-slate-800 block">{it.name}</span>

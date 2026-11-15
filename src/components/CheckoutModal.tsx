@@ -92,26 +92,31 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       status: 'pending'
     };
 
-    // Save to LocalStorage for instant local dashboard sync
+    // Save to LocalStorage for instant local dashboard sync across both keys
     try {
-      const existing = JSON.parse(localStorage.getItem('foodflow_local_orders') || '[]');
+      const existing = JSON.parse(localStorage.getItem('foodflow_mgmt_orders') || localStorage.getItem('foodflow_local_orders') || '[]');
       const newLocalOrder = {
         ...orderPayload,
         id: 'ord-' + Date.now(),
         created_at: new Date().toISOString()
       };
       localStorage.setItem('foodflow_local_orders', JSON.stringify([newLocalOrder, ...existing]));
+      localStorage.setItem('foodflow_mgmt_orders', JSON.stringify([newLocalOrder, ...existing]));
+      // Clean any accidental demo reset flag
+      localStorage.removeItem('foodflow_demo_reset_v2');
       window.dispatchEvent(new CustomEvent('foodflow_new_order', { detail: newLocalOrder }));
     } catch (e) {
       console.warn('Local order storage note:', e);
     }
 
-    // Save to Supabase (async)
+    // Save to Supabase Cloud Database (async)
     (async () => {
       try {
-        const { error } = await supabase.from('orders').insert([orderPayload]);
+        const { data, error } = await supabase.from('orders').insert([orderPayload]).select();
         if (error) {
           console.warn('Supabase order insert note:', error.message);
+        } else if (data && data[0]) {
+          console.log('Order successfully synced to Supabase cloud:', data[0].order_number);
         }
       } catch (err) {
         console.warn('Supabase network error:', err);
